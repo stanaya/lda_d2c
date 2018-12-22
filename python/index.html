@@ -1,0 +1,95 @@
+<html> <head>
+<title>LDA in Python</title>
+</head>
+
+<body bgcolor="#dfdfdf">
+<h2>lda.py: LDA in Python.</h2>
+
+Daichi Mochihashi<br>
+The Institute of Statistical Mathematics, Tokyo<br>
+$Id: index.html,v 1.1 2016/02/06 14:51:48 daichi Exp $
+<p>
+lda.py is a Python/Cython implementation of a standard Gibbs sampling
+for the latent Dirichlet allocation (Blei+, 2003).<br>
+This package is based on a part of the codes by Ryan P. Adams (Harvard).
+
+<h3>Download</h3>
+
+<ul>
+  <li><a href="lda.py-0.1.tar.gz">lda.py-0.1.tar.gz</a>
+</ul>
+
+<h3>Requirements</h3>
+
+<ul>
+  <li>Python 2.x (developed with Python 2.7.5)
+  <li>Cython (developed with Cython 0.23.2)
+  <li>Numpy &amp; Scipy
+</ul>
+
+<h3>Install</h3>
+
+Type the following using this <a href="cycc">cycc</a> script:
+<pre>
+% emacs cycc (Edit cycc for some options)
+% cycc ldac.pyx
+</pre>
+That's all!
+
+<h3>Usage</h3>
+<pre>
+% ./lda.py -h
+usage: lda.py OPTIONS train model
+OPTIONS
+ -K topics  number of topics in LDA
+ -N iters   number of Gibbs iterations
+ -a alpha   Dirichlet hyperparameter on topics
+ -b beta    Dirichlet hyperparameter on words
+ -h         displays this help
+$ Id: lda.py,v 1.10 2016/02/06 14:05:38 daichi Exp $
+</pre>
+
+"train" is a data file whose format is the same as
+<a href="/~daiti-m/dist/lda/">lda</a> or SVMlight, and "model" is a basename
+of generated model files.
+
+<h3>Getting started</h3>
+
+You can start using lda.py as a following example with the
+<a href="train">train</a> datafile contained in this package:
+<pre>
+% ./lda.py -K 10 -N 100 train model
+LDA: K = 10, iters = 100, alpha = 5, beta = 0.01
+loading data.. documents = 100, lexicon = 1325, nwords = 16054
+initializing..
+Gibbs iteration [100/100] PPL = 712.9421
+saving model..
+done.
+</pre>
+This generates following model files with a basename <b>model</b>:
+<dl>
+  <dt><b>model</b>.alpha
+  <dd>alpha parameter in LDA. This is the same as set by -a option.
+      (not learned)
+  <dt><b>model</b>.beta
+  <dd>beta parameters in LDA. This is a VxK matrix of probabilities
+      (V = size of the lexicon, K = number of topics)
+  <dt><b>model</b>.theta
+  <dd>Expectation of the posterior distribution of theta for each document.
+      This can be considered as a topic mixing distribution learned by LDA.
+      This is a NxK matrix of probabilities. (N = number of documents)
+  <dt><b>model</b>.wz
+  <dd>Word-topic allocation data actually learned with the Gibbs sampler.
+      Each document is separated by a blank line, and each line consists of
+      two integers, word id and its allocated topic.
+  <dt><b>model</b>.log
+  <dd>Log file recording the command line and information of each
+      iteration.
+</dl>
+
+<hr>
+<address>daichi&lt;at&gt;ism.ac.jp</address>
+<!-- hhmts start -->
+Last modified: Sat Feb  6 23:57:28 2016
+<!-- hhmts end -->
+</body> </html>

@@ -1,0 +1,169 @@
+\documentclass[uplatex]{jsarticle}
+\和暦
+\usepackage[top=25truemm,bottom=25truemm,left=25truemm,right=25truemm]{geometry}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{color}
+\usepackage{listings}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+\begin{document}
+
+\title{\huge D系クエリとAAのLDAについて}
+\author{木村　健}
+\date{\today}
+\maketitle
+
+\section{このドキュメントについて}
+このドキュメントではD系（ドコモ）クエリのLDA(木村は未達)と
+AA(All About)記事のLDA（今絶賛この文章を書きながら回している）
+について、作業した内容の共有と、その時生成されたデータや使ったプログラム
+について説明を加える。
+
+\section{D系クエリLDA}
+まず、D系クエリの膨大なデータの蓄積がある。
+これはApache Hiveのデータ構造になっていて、スキーマを
+構成するフィールドにクエリ文字列と時間、個人識別のidが含まれている。
+解析するためにはまずこれらのデータを単一のCSVに落とすことが
+考えられるが、現状2ヶ月ほどのデータについてこれを試みたところ、
+おそらく600GBくらいのデータになることが試算と実験でわかった。
+
+このためCSVをインメモリで処理できる限界量までCSVを膨らませて
+解析するか、そもそもCSVファイルで解析することを諦めて、
+Hive上で最終的にLDA解析に必要なデータをデータベースの
+データとして収集するか、どちらかを選択する必要があり、木村は
+後者の手法（データベース上でHiveで操作）を選び作業を
+途中まで進めた。
+
+まずHiveで形態素解析をするApache Hive UDF(User Defined Function)として
+mecabを使ったものを作る必要性を感じ、
+
+\begin{quote}
+
+https://github.com/kazuhira-r/kuromoji-with-mecab-neologd-buildscript
+
+\end{quote}
+
+
+から派生した新しいレポジトリを作成し、kuromojiを経由せずmecabを直接Java APIで
+制御するHive UDFを作った。
+
+\begin{quote}
+
+https://github.com/kimrin/spark-hive-udf-mecab
+
+\end{quote}
+
+本レポジトリの一連のスクリプトは、
+
+mecabをインストールし、neologdをインストールし、
+次にHive UDFを含んだJavaプログラムをコンパイルして二つのJarに
+まとめる。
+
+使用側では、HiveをHueのインタフェース上などから、
+ADDJAR してTEMPORARY FUNCTIONを作り、
+これをSELECT文のフィールドに対して関数のように使う。
+今のところ表層を分かち書きするsurface関数だけが提供されている。
+
+\begin{verbatim}
+ADD JAR MeCab.jar;
+ADD JAR spark-hive-udf_2.10-0.1.0.jar;
+CREATE TEMPORARY FUNCTION surface AS 'com.ardentex.spark.hiveudf.MecabSurface';
+SELECT keyword, surface(keyword) FROM full_query WHERE ver='2018-06-01' AND sub_ver='00-00-00';
+\end{verbatim}
+
+ただ、調査の結果性能としてはD系クエリ５日分くらいでmecabのインスタンス破壊が観測され、回避策を入れたが、
+結局のところmecabの対クエリ耐性からこれ以上をMapReduceやTezで実行すると途中で落ちてしまう現象に遭遇した。
+
+結果的にこれらの危ない日付を回避してデータベースのテーブルを構成すれば良いのだが、そこまで
+行かなかったのと、LDAのために必要なTF（term frequencies)をHive SQLでどのように順に集計していけばいいのか
+まだ学習途中で途中までしか進められなかった。
+
+少しspark-hive-udf-mecabに力を入れすぎた感がある。のちの調査でHive Mallに含まれているkuromojiでは
+Hive Mallを導入するだけである程度の性能のKuromoji解析機がHive UDFとして使えることがわかり、
+事実上spark-hive-udf-mecabは遺跡となった。
+
+結果、LDA に必要な擬似SVMデータを得られないまま今日に至っている・・・
+
+棚谷さんが３日分のクエリーについて結果を出しておられるそうです・・・
+
+\section{AAのLDAについて}
+AAからほぼHTMLママのCSVファイルを頂いた（zipで）。
+これをPython3のbeautiful soupで解析して、
+手頃な扱いのできるJSONファイルに直したところ、27GBくらいの大きさになった。
+（この作業は木村が実施した）。
+
+このJSONは次のような構成になっている。
+\begin{verbatim}
+{"記事番号": {
+                     "記事番号枝番": {
+                                                 "articles": [
+                                                        {"H3": "見出し",
+                                                         "text": ["テキスト1", "テキスト2", ..., "テキスト_n"]
+                                                        }, {...}, {...}, ...
+                                                 ]
+                      }
+}
+\end{verbatim}
+
+基本的にH3タグが見出しなのだが、一部fontタグで代用されているものがあった。
+それらについては単純に抜き出すのではなく、bタグで囲ってあるものだけを
+H3として抽出した。
+
+またtextについては連続しているものが途中で物理的に切断されている
+ものがある。このため文の区切りとしては不適切な切り方も多く存在する。
+
+\subsection{LDAやってみた}
+上記のJSONデータを使ってLDAの元データ（SVMファイル）を作ってみた。
+ベースとしてja.text8のプログラムを使った。
+ドキュメントとしてはH3の全てを分かち書きしたものと、textを連結した一つのテキストとして
+分かち書きしたものをデータとして使った。
+
+結果、かなり大きなsvmファイルができた。
+
+documents = 393007, lexicon = 835732, nwords = 38600153.
+
+今回は時間の関係上N=700とやや小さい値で検証した。
+topicsも100とやや小さめである。
+それでもm4.4xlargeのマシン（RAM 64GB)で17時間ほど掛かった。
+
+時間があれば、topics=2000, N=1000くらいのタスクをやってみたい。
+
+あと付記として、thetaをsaveするとき巨大なnp.zerosを実行するようで、
+thetaをsaveする途中でメモリエラーで落ちてしまう現象が出た。
+単純にthetaのセーブをコメントアウトして（現在のところ使わない）、
+対処した。
+
+結果のExcelファイルについては別箇添付する。
+N=700ではあるが、AAコーパスの品質の良さが幸いしてか、
+妥当な分類解となっている。
+
+N=700時のperplexity=9466である。
+
+
+
+
+\begin{thebibliography}{99}
+  \bibitem{murphy} Kevin P. Murphy: Machine Learning: A Probabilistic Perspective (Adaptive Computation and Machine Learning series) The MIT Press, 2012.
+  \bibitem{blei} Blei, David M. and Ng, Andrew Y. and Jordan, Michael I.: Latent Dirichlet Allocation,
+J. Mach. Learn. Res. 3/1, volume 3, 2003.
+\end{thebibliography}
+\end{document}

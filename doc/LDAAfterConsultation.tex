@@ -1,0 +1,111 @@
+\documentclass[uplatex,dvipdfmx]{jsarticle}
+\和暦
+\usepackage[top=25truemm,bottom=25truemm,left=25truemm,right=25truemm]{geometry}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{color}
+\usepackage{listings}
+\usepackage[bookmarks=true,bookmarksnumbered=true,bookmarkstype=toc]{hyperref}
+\usepackage{pxjahyper}
+\hypersetup{pdftitle={lda.pyとデータセット（その２）},pdfauthor={木村　健},
+  pdfkeywords={upTeX,upLaTeX,LDA,NIPS,ja.text8,20newsgroups}}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+\begin{document}
+
+\title{\huge lda.pyとデータセット（その２）}
+\author{木村　健}
+\date{\today}
+\maketitle
+
+
+\section{このドキュメントについて}
+本ドキュメントは持橋先生が改良し、さらにそれを木村が少し改良した
+lda.pyについて、いくつかハイパーパラメータについての知見や
+コーパス（ja.text8）のバグが発見されたので
+それについて学習結果を踏まえて解説する。
+
+それぞれの分類結果のファイル名と各種パラメーターについては、
+最後に表を列挙するので急いでいる方はそちらを当たられたい。
+
+
+\section{NIPS}
+NIPSについてはもうすでに前処理された結果が提供されているので、
+特にこれ以上改良しない。
+
+\section{The 20 Newsgroups data set}
+正規表現"[a-zA-Z]+"を通るものだけ扱ってはどうか、
+という持橋先生のご指摘に則り、そのような正規表現フィルターを
+実装してみた。なお最低頻度の閾値が今見たら50になっていたが、
+これはもっと下げてもいいかもしれない。ただあとで述べるがデータ（分類結果）を
+観たところ単語ではないものが多く散見され、むしろ閾値をあげた方がいいのかも
+と思ってしまう結果であった。
+
+\section{ja.text8}
+まず、最低頻度が高すぎるであろうという意見があった。頻度の低い単語の
+中に重要な情報が含まれていることは珍しいことではなく、ただperplexityの
+ためだけに最低頻度を高く設定してしまうのは間違いだということで、一気に
+2以上だけ扱う、という風にした。
+
+またja.text8のコーパス自体（僕の変更した分）に誤りがあり、
+連接する文章の切れ目（普通は「。」と「先頭単語」）にスペースが入っていなくて、
+「。あ」のような単語が出来てしまっていた。コーパスごと修正した。
+このためコーパスに収録の文数が少しだけ少なくなった。
+収録文書数は36353文書である。
+
+\section{hyper parameter alpha}
+$\alpha=0.01$とした。（過去の実験で一番良かった値。）
+
+\section{hyper parameter beta}
+$\beta=0.01$とした。
+
+
+
+\protect\newpage
+\section{結果ファイル（重要なものだけ抜粋）}
+\begin{table}[htb]
+\begin{tabular}{||l||l|l|l|l|l|l|l|l||} \hline\hline
+file prefix & alpha & beta & N & K & En/Ja & date & min. perp. & desc. \\ \hline\hline 
+ja.0717least2 & 0.01 & 0.01 & 1000 & 1000 & Ja & Jul 18 & 9695 & 最低頻度2以上 \\ \hline
+ja.0720.2000 & 0.01 & 0.01 & 1000 & 2000 & Ja & Jul 22 & 11439 & K=2000のデータ \\ \hline
+ja.text8.cool & 0.01 & 0.01 & 100 & 10 & Ja & Jun 22 & 1273 & coolcutter適用後 \\ \hline
+20news.regexp & 0.01 & 0.01 & 1000 & 1000 & En & Jul 25 & 2177 & 正規表現フィルタ \\ \hline
+ja.text8.kanji & 0.01 & 0.01 & 1000 & 2000 & Ja(new) & Jul 26 & 10189 & コーパス修正 \\ \hline \hline
+\end{tabular}
+\end{table}
+
+結果ファイルについてはNLPリポジトリの/topics以下を参照されたい。prefixに.topics.csvを
+つけたファイル名がデータファイル名である。
+
+\begin{itemize}
+\item コーパスのバグによりperplexityが1000ほど上がっていた
+\item 最低頻度を2にするとKが大きい時にいろんな単語が入ってきてデータとして充実する
+\item 正規表現フィルターは20newsに入れたのだが、却って非単語が目立つ形となった
+\item 日本語のstop wordsは頻度順にトップ100を除いている
+\item 英語のstop wordsはライブラリ提供のものを使った
+\end{itemize}
+
+\begin{thebibliography}{99}
+  \bibitem{murphy} Kevin P. Murphy: Machine Learning: A Probabilistic Perspective (Adaptive Computation and Machine Learning series) The MIT Press, 2012.
+  \bibitem{blei} Blei, David M. and Ng, Andrew Y. and Jordan, Michael I.: Latent Dirichlet Allocation,
+J. Mach. Learn. Res. 3/1, volume 3, 2003.
+  \bibitem{griffiths} Thomas L. Griffiths, Mark Steyvers.: Finding Scientific Topics. PNAS (101) pp. 5228-5235, 2004.
+\end{thebibliography}
+\end{document}
