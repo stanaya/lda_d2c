@@ -44,7 +44,7 @@ RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc && \
 RUN pyenv install anaconda3-5.3.1
 RUN pyenv global anaconda3-5.3.1
 RUN pip install --upgrade pip
-RUN pip install mecab-python3 gensim lightGBM awscli
+RUN pip install mecab-python3 lightGBM awscli
 
 # mecab-neologd
 RUN git clone https://github.com/neologd/mecab-ipadic-neologd.git
