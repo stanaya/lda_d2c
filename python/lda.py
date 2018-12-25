@@ -224,10 +224,10 @@ def update_alpha(ND, alpha_arr):
 def cal_denom_new_alpha(nd, D, alpha_arr_tmp):
     sum_alpha = np.sum(alpha_arr_tmp)
     sum_alpha_arr = np.full(D, sum_alpha)
-    return np.sum(digamma(nd + sum_alpha_arr) - digamma(sum_alpha_arr))
+    return np.sum(digamma(nd + sum_alpha_arr) - digamma(sum_alpha_arr)) - 0.0001
 
 def cal_numer_new_alpha(ND, k, alpha_arr_tmp):
-    return np.sum( digamma(ND[:,k] + alpha_arr_tmp[k]) - digamma(alpha_arr_tmp[k])) * alpha_arr_tmp[k]
+    return np.sum( digamma(ND[:,k] + alpha_arr_tmp[k]) - digamma(alpha_arr_tmp[k])) * alpha_arr_tmp[k] + 0.0001
 
 def update_beta(NW, beta):
     V = NW.shape[0]
