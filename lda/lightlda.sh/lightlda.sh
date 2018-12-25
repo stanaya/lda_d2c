@@ -12,7 +12,7 @@ usage () {
     exit 0
 }
 
-root=$HOME/lightlda
+root=$HOME/LightLDA
 mhsteps=2
 
 #
