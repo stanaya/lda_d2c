@@ -46,6 +46,10 @@ RUN pyenv global anaconda3-5.3.1
 RUN pip install --upgrade pip
 RUN pip install mecab-python3 lightGBM awscli gensim
 
+RUN conda create -y -n py27 python=2.7 anaconda
+RUN echo 'alias py2="source ~/.pyenv/versions/anaconda3-5.3.1/bin/activate py27"' >> ~/.bashrc
+RUN echo 'alias py3="source ~/.pyenv/versions/anaconda3-5.3.1/bin/deactivate"' >> ~/.bashrc
+
 # mecab-neologd
 RUN git clone https://github.com/neologd/mecab-ipadic-neologd.git
 RUN cd mecab-ipadic-neologd && \
