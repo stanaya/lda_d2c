@@ -55,4 +55,4 @@ RUN git clone https://github.com/neologd/mecab-ipadic-neologd.git
 RUN cd mecab-ipadic-neologd && \
     sudo bin/install-mecab-ipadic-neologd -y
 
-RUN git clone https://github.com/stanaya/lda_d2c.git
+RUN git clone https://github.com/stanaya/lda_d2c.git --recursive
